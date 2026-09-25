@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ruby-checks:
+    name: Syntax + isolated unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: ruby:3.2-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check all Ruby files
+        run: |
+          set -e
+          find . -name '*.rb' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 ruby -c
+
+      - name: Run isolated unit tests (no live Redmine required)
+        run: |
+          set -e
+          for f in test/unit/*_test.rb; do
+            echo "== $f =="
+            ruby -Ilib -Itest "$f"
+          done
+
+      - name: Note on functional tests
+        run: |
+          echo "test/functional/*_test.rb require a full booted Redmine host app and are intentionally not run in this standalone-plugin CI. See docs/COMPATIBILITY.md."
