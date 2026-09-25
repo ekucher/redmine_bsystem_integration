@@ -1,0 +1,78 @@
+<%#
+  Related Objects panel (Stage 1 MVP).
+
+  Rendered either:
+    - from RedmineBsystemIntegration::Hooks#view_issues_show_details_bottom
+      on the issue show page, or
+    - directly by BsystemRelationshipsController after an add/remove.
+
+  `issue` is a native Redmine Issue the current user's visibility has
+  already been checked for by the caller. `panel` is a
+  RedmineBsystemIntegration::RelationshipsPresenter::Result.
+
+  Deep links are best-effort: BSYSTEM does not yet expose canonical
+  cross-system URLs to this plugin, so the other endpoint is shown as a
+  plain Global ID + relation type label, not a clickable link into another
+  application's real UI.
+%>
+<div id="bsystem-relationships-panel" class="box">
+  <h3><%= l('redmine_bsystem_integration.related_objects') %></h3>
+
+  <% case panel.status %>
+  <% when :unconfigured %>
+    <p class="nodata icon icon-warning"><%= panel.message %></p>
+  <% when :degraded %>
+    <p class="nodata icon icon-warning"><%= panel.message %></p>
+  <% when :error %>
+    <p class="nodata icon icon-error"><%= panel.message %></p>
+  <% else %>
+    <% if panel.relationships.blank? %>
+      <p class="nodata"><%= l('redmine_bsystem_integration.no_relationships') %></p>
+    <% else %>
+      <table class="list bsystem-relationships">
+        <thead>
+          <tr>
+            <th><%= l('redmine_bsystem_integration.global_id') %></th>
+            <th><%= l('redmine_bsystem_integration.relation_type') %></th>
+            <th><%= l('redmine_bsystem_integration.direction') %></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% panel.relationships.each do |rel| %>
+            <% other_global_id = rel['global_id']
+               cached_id = RedmineBsystemIntegration::RelationshipIdCache.lookup(panel.global_id, other_global_id) %>
+            <tr>
+              <td><%= other_global_id %></td>
+              <td><%= rel['relation_type'] %></td>
+              <td><%= rel['direction'] %></td>
+              <td>
+                <% if cached_id && issue.editable?(User.current) %>
+                  <%= button_to l('redmine_bsystem_integration.remove'),
+                        issue_bsystem_relationship_path(issue, cached_id, other_global_id: other_global_id),
+                        method: :delete,
+                        class: 'icon icon-del',
+                        data: { confirm: l('redmine_bsystem_integration.confirm_remove') } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+
+    <% if issue.editable?(User.current) %>
+      <%= form_tag(issue_bsystem_relationships_path(issue), method: :post, class: 'bsystem-add-relationship') do %>
+        <label>
+          <%= l('redmine_bsystem_integration.relation_type') %>
+          <%= select_tag :relation_type, options_for_select(RedmineBsystemIntegration::CoreClient::RELATION_TYPES) %>
+        </label>
+        <label>
+          <%= l('redmine_bsystem_integration.global_id') %>
+          <%= text_field_tag :to_global_id, nil, placeholder: l('redmine_bsystem_integration.to_global_id_placeholder') %>
+        </label>
+        <%= submit_tag l('redmine_bsystem_integration.add') %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
