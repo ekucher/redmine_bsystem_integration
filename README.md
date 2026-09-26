@@ -15,8 +15,14 @@ invariants this plugin must respect.
 ## Compatibility
 
 Targets Redmine 5.0+ (see `init.rb`). Compatibility with the actually deployed Redmine
-version must be verified before relying on any plugin API assumption.
+version must be verified before relying on any plugin API assumption. See
+`docs/COMPATIBILITY.md` for the full caveat and for how to configure Integration Core
+connectivity (`BSYSTEM_CORE_BASE_URL`, `BSYSTEM_CORE_SERVICE_TOKEN`, and related
+environment variables — never commit these).
 
 ## Status
 
-Bootstrap only — no functional code yet.
+Stage 1 MVP: a native "Related Objects" panel on the issue show page, backed by
+Integration Core's relationship endpoints (list/create/delete). See
+`docs/COMPATIBILITY.md` for open dependencies (end-user actor token wiring) and known
+Core contract gaps this plugin works around.
