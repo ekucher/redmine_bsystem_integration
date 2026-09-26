@@ -28,6 +28,9 @@ jobs:
             ruby -Ilib -Itest "$f"
           done
 
+      - name: Check no real hostnames are committed
+        run: ruby scripts/check_no_real_hostnames.rb
+
       - name: Note on functional tests
         run: |
           echo "test/functional/*_test.rb require a full booted Redmine host app and are intentionally not run in this standalone-plugin CI. See docs/COMPATIBILITY.md."
