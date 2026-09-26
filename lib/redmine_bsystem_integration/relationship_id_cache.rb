@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module RedmineBsystemIntegration
-  # Non-authoritative, best-effort cache mapping a (Global ID, Global ID)
-  # pair to the numeric relationship id Integration Core returned when this
-  # plugin created that relationship.
+  # Non-authoritative, best-effort cache mapping a (Global ID, Global ID,
+  # relation_type) triple to the numeric relationship id Integration Core
+  # returned when this plugin created that relationship.
   #
   # WHY THIS EXISTS (a real Core contract gap, not a design choice): the
   # list endpoint's RelationshipView response
@@ -27,34 +27,37 @@ module RedmineBsystemIntegration
   # or a different Redmine process simply means the remove button does not
   # appear for that relationship until it is re-created).
   #
-  # Simplification: keyed by the unordered Global ID pair only (not by
-  # relation_type spelling), since Integration Core's create is idempotent
-  # per (from, relation_type, to) triple and this plugin does not currently
-  # need to distinguish multiple simultaneous relation types between the
-  # same two Global IDs.
+  # Keyed by (unordered Global ID pair, relation_type). relation_type is
+  # part of the key — not dropped — because Integration Core's own model
+  # allows more than one relation_type between the same two Global IDs
+  # (e.g. both "tests" and "documents"), each a distinct edge with its own
+  # id. Keying by the pair alone would collide the two edges onto one
+  # cached id, and clicking "Remove" on one relation_type's row could then
+  # delete the *other* relation_type's edge instead — not the target object
+  # this cache exists to protect, but still the wrong edge.
   module RelationshipIdCache
     NAMESPACE = 'bsystem_integration:relationship_id'
     TTL = 30.days
 
     module_function
 
-    def remember(global_id_a, global_id_b, id)
+    def remember(global_id_a, global_id_b, relation_type, id)
       return if id.nil?
 
-      Rails.cache.write(cache_key(global_id_a, global_id_b), id, expires_in: TTL)
+      Rails.cache.write(cache_key(global_id_a, global_id_b, relation_type), id, expires_in: TTL)
     end
 
-    def lookup(global_id_a, global_id_b)
-      Rails.cache.read(cache_key(global_id_a, global_id_b))
+    def lookup(global_id_a, global_id_b, relation_type)
+      Rails.cache.read(cache_key(global_id_a, global_id_b, relation_type))
     end
 
-    def forget(global_id_a, global_id_b)
-      Rails.cache.delete(cache_key(global_id_a, global_id_b))
+    def forget(global_id_a, global_id_b, relation_type)
+      Rails.cache.delete(cache_key(global_id_a, global_id_b, relation_type))
     end
 
-    def cache_key(global_id_a, global_id_b)
+    def cache_key(global_id_a, global_id_b, relation_type)
       pair = [global_id_a.to_s, global_id_b.to_s].sort
-      "#{NAMESPACE}:#{pair.join('|')}"
+      "#{NAMESPACE}:#{pair.join('|')}:#{relation_type}"
     end
   end
 end

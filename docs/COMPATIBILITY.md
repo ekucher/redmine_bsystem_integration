@@ -88,3 +88,13 @@ any other means are shown but cannot be removed from this panel. This is
 flagged here for whoever owns the Integration Core contract to consider
 (e.g. adding `id` to `RelationshipView`) — it is not something this plugin
 can correctly work around by inventing an id.
+
+The cache key is `(unordered Global ID pair, relation_type)` — relation_type
+is part of the key, not dropped, because Core allows more than one
+relation_type between the same two Global IDs (e.g. both "tests" and
+"documents"), each its own edge with its own id. An earlier revision of this
+cache keyed by the pair alone, which collided two such edges onto one cached
+id; removing one relation_type's row could then delete the *other*
+relation_type's edge instead. Caught by a two-axis `/code-review` and fixed
+before merge — see `test/unit/relationship_id_cache_test.rb`'s
+`test_different_relation_types_between_the_same_pair_do_not_collide`.

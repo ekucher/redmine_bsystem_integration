@@ -55,42 +55,62 @@ require File.expand_path('../../lib/redmine_bsystem_integration/relationship_id_
 
 class RelationshipIdCacheTest < Minitest::Test
   def setup
-    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012')
+    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012', 'tests')
+    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012', 'documents')
   end
 
   def test_lookup_is_nil_before_anything_remembered
-    assert_nil RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012')
+    assert_nil RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
   end
 
   def test_remember_then_lookup_round_trips_the_id
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 55)
-    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012')
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
   end
 
   def test_lookup_is_order_independent_pair_key
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 55)
-    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TST-000012', 'TSK-000001')
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TST-000012', 'TSK-000001', 'tests')
   end
 
   def test_remember_with_nil_id_does_not_overwrite_or_store_anything
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 55)
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', nil)
-    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012')
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', nil)
+    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
   end
 
   def test_forget_clears_the_stored_id
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 55)
-    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012')
-    assert_nil RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012')
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012', 'tests')
+    assert_nil RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
   end
 
   def test_different_pairs_do_not_collide
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 55)
-    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000002', 'TST-000012', 66)
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000002', 'TST-000012', 'tests', 66)
 
-    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012')
-    assert_equal 66, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000002', 'TST-000012')
+    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
+    assert_equal 66, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000002', 'TST-000012', 'tests')
   ensure
-    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000002', 'TST-000012')
+    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000002', 'TST-000012', 'tests')
+  end
+
+  # Regression test for the collision a two-axis /code-review found: the
+  # cache used to key by the unordered Global ID pair alone, dropping
+  # relation_type, so two distinct relation types between the same pair
+  # collided onto one cached id -- removing one relation_type's row could
+  # delete the *other* relation_type's edge instead.
+  def test_different_relation_types_between_the_same_pair_do_not_collide
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'tests', 55)
+    RedmineBsystemIntegration::RelationshipIdCache.remember('TSK-000001', 'TST-000012', 'documents', 77)
+
+    assert_equal 55, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
+    assert_equal 77, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'documents')
+
+    RedmineBsystemIntegration::RelationshipIdCache.forget('TSK-000001', 'TST-000012', 'tests')
+
+    assert_nil RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'tests')
+    assert_equal 77, RedmineBsystemIntegration::RelationshipIdCache.lookup('TSK-000001', 'TST-000012', 'documents'),
+                 "forgetting one relation_type's edge must not affect a different relation_type's edge"
   end
 end

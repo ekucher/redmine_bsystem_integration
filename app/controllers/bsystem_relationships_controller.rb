@@ -35,7 +35,7 @@ class BsystemRelationshipsController < ApplicationController
         to_global_id: to_global_id,
         actor_token: actor_token
       )
-      RedmineBsystemIntegration::RelationshipIdCache.remember(from_global_id, to_global_id, relationship['id'])
+      RedmineBsystemIntegration::RelationshipIdCache.remember(from_global_id, to_global_id, relation_type, relationship['id'])
       flash[:notice] = l('redmine_bsystem_integration.related_objects')
     rescue RedmineBsystemIntegration::CoreClient::Unavailable
       flash[:error] = l('redmine_bsystem_integration.core_unavailable')
@@ -62,9 +62,10 @@ class BsystemRelationshipsController < ApplicationController
       # at) — only the edge between them.
       core_client.delete_relationship(id: params[:id], actor_token: actor_token)
       other_global_id = params[:other_global_id]
-      if other_global_id.present?
+      relation_type = params[:relation_type]
+      if other_global_id.present? && relation_type.present?
         RedmineBsystemIntegration::RelationshipIdCache.forget(
-          RedmineBsystemIntegration::GlobalId.for_issue(@issue), other_global_id
+          RedmineBsystemIntegration::GlobalId.for_issue(@issue), other_global_id, relation_type
         )
       end
     rescue RedmineBsystemIntegration::CoreClient::Unavailable
