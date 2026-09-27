@@ -34,3 +34,21 @@ jobs:
       - name: Note on functional tests
         run: |
           echo "test/functional/*_test.rb require a full booted Redmine host app and are intentionally not run in this standalone-plugin CI. See docs/COMPATIBILITY.md."
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Gitleaks scans history, not just the working tree: a secret that
+          # was committed and then removed is still a leaked secret.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
