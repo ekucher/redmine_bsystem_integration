@@ -23,10 +23,14 @@ jobs:
       - name: Run isolated unit tests (no live Redmine required)
         run: |
           set -e
-          for f in test/unit/*_test.rb; do
-            echo "== $f =="
-            ruby -Ilib -Itest "$f"
-          done
+          if [ ! -d test/unit ] || [ -z "$(ls test/unit/*_test.rb 2>/dev/null)" ]; then
+            echo "no test/unit/*_test.rb yet -- nothing to run"
+          else
+            for f in test/unit/*_test.rb; do
+              echo "== $f =="
+              ruby -Ilib -Itest "$f"
+            done
+          fi
 
       - name: Check no real hostnames are committed
         run: ruby scripts/check_no_real_hostnames.rb
