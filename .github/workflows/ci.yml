@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ruby-checks:
+    name: Syntax + isolated unit tests
+    runs-on: ubuntu-latest
+    container:
+      image: ruby:3.2-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check all Ruby files
+        run: |
+          set -e
+          find . -name '*.rb' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 ruby -c
+
+      - name: Run isolated unit tests (no live Redmine required)
+        run: |
+          set -e
+          if [ ! -d test/unit ] || [ -z "$(ls test/unit/*_test.rb 2>/dev/null)" ]; then
+            echo "no test/unit/*_test.rb yet -- nothing to run"
+          else
+            for f in test/unit/*_test.rb; do
+              echo "== $f =="
+              ruby -Ilib -Itest "$f"
+            done
+          fi
+
+      - name: Check no real hostnames are committed
+        run: ruby scripts/check_no_real_hostnames.rb
+
+      - name: Note on functional tests
+        run: |
+          echo "test/functional/*_test.rb require a full booted Redmine host app and are intentionally not run in this standalone-plugin CI. See docs/COMPATIBILITY.md."
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Gitleaks scans history, not just the working tree: a secret that
+          # was committed and then removed is still a leaked secret.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
