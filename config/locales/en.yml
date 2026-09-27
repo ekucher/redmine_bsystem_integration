@@ -1,3 +1,14 @@
 en:
   redmine_bsystem_integration:
     related_objects: "Related Objects"
+    no_relationships: "No related objects yet."
+    core_unconfigured: "BSYSTEM Core connectivity is not configured."
+    core_unavailable: "Related Objects unavailable — BSYSTEM Core could not be reached."
+    actor_unavailable: "Your BSYSTEM identity token is not available in this Redmine session; add/remove is disabled."
+    add: "Add"
+    remove: "Remove"
+    global_id: "Global ID"
+    relation_type: "Relation"
+    direction: "Direction"
+    to_global_id_placeholder: "e.g. REQ-000004"
+    confirm_remove: "Remove this relationship? The related object itself will not be affected."

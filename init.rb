@@ -1,5 +1,13 @@
 require 'redmine'
 
+require File.expand_path('lib/redmine_bsystem_integration/settings', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/global_id', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/actor_token_resolver', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/relationship_id_cache', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/core_client', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/relationships_presenter', __dir__)
+require File.expand_path('lib/redmine_bsystem_integration/hooks', __dir__)
+
 Redmine::Plugin.register :redmine_bsystem_integration do
   name 'BSYSTEM Integration'
   author 'BSYSTEM'
